@@ -30,8 +30,8 @@
 
 #define CSV_DECIMAL_PRECISION 2
 
-int process_thermal_data(ThermalTelemetryCalibrated* thermal_telemetry_array, size_t thermal_length);
-int process_sun_sensors_data(SunSensorsTelemetryCalibrated* sun_sensors_telemetry_array, size_t sun_sensors_length);
+int process_thermal_data(ThermalTelemetryCalibrated* thermal_telemetry_array, size_t *thermal_length);
+int process_sun_sensors_data(SunSensorsTelemetryCalibrated* sun_sensors_telemetry_array, size_t *sun_sensors_length);
 
 // @note Because this is a code::blocks project, I opted for not using console parameters
 // even that it's easy to configure, for simplicity, not used.
@@ -136,16 +136,22 @@ int main()
         return 1;
     }
 
+    printf("[CHCK] thermal data packets: %d \n",thermal_length);
+    printf("[CHCK] SUN data packets: %d \n",sun_sensor_length);
+
     printf("[EXEC] thermal data processing... \n");
-    if(!process_thermal_data(thermal_telemetry_array, thermal_length))
+    if(!process_thermal_data(thermal_telemetry_array, &thermal_length))
     {
         fprintf(stderr, "ERROR: could not process the thermal data for some reason \n");
     }
     printf("[EXEC] sun sensor data processing... \n");
-    if(!process_sun_sensors_data(sun_sensor_telemetry_array, sun_sensor_length))
+    if(!process_sun_sensors_data(sun_sensor_telemetry_array, &sun_sensor_length))
     {
         fprintf(stderr, "ERROR: could not process the sun sensor data for some reason \n");
     }
+
+    printf("[CHCK] thermal data packets post process: %d \n",thermal_length);
+    printf("[CHCK] SUN data packets post process: %d \n",sun_sensor_length);
 
     free(thermal_telemetry_array);
     free(sun_sensor_telemetry_array);
@@ -153,21 +159,21 @@ int main()
 }
 
 
-int process_thermal_data(ThermalTelemetryCalibrated* thermal_telemetry_array, size_t thermal_length)
+int process_thermal_data(ThermalTelemetryCalibrated* thermal_telemetry_array, size_t *thermal_length)
 {
     //PROCESS THERMAL VALUES (NOT NEEDED BUT ALREADY DONE)
     // sort by timestamp using qsort
-    qsort(thermal_telemetry_array, thermal_length, sizeof *thermal_telemetry_array, thermal_timestamp_comparator);
+    qsort(thermal_telemetry_array, *thermal_length, sizeof *thermal_telemetry_array, thermal_timestamp_comparator);
 
     //Update the new array size with duplicates removed
-    thermal_length = array_duplicate_removal(thermal_telemetry_array, thermal_length, sizeof *thermal_telemetry_array, thermal_timestamp_comparator);
+    *thermal_length = array_duplicate_removal(thermal_telemetry_array, *thermal_length, sizeof *thermal_telemetry_array, thermal_timestamp_comparator);
 
     printf("[EXEC] generating CSV for thermal data at: ./%s\n",THERMAL_DATA_CSV_FILENAME);
 
     int csv_file_status = write_array_to_csv(
         THERMAL_DATA_CSV_FILENAME,
         thermal_telemetry_array,                // Generic pointer to the data array
-        thermal_length,                         // Number of elements
+        *thermal_length,                         // Number of elements
         sizeof(ThermalTelemetryCalibrated),     // Size of a single element
         thermal_calibrated_to_csv_line,         // The callback formatter function
         CSV_DECIMAL_PRECISION,                  // Decimal precision on print
@@ -185,22 +191,22 @@ int process_thermal_data(ThermalTelemetryCalibrated* thermal_telemetry_array, si
     return 1;
 }
 
-int process_sun_sensors_data(SunSensorsTelemetryCalibrated* sun_sensors_telemetry_array, size_t sun_sensors_length)
+int process_sun_sensors_data(SunSensorsTelemetryCalibrated* sun_sensors_telemetry_array, size_t *sun_sensors_length)
 {
     //PROCESS SUNSENSOR VALUES
     // sort by timestamp using qsort
     qsort(
           sun_sensors_telemetry_array,
-          sun_sensors_length,
+          *sun_sensors_length,
           sizeof * sun_sensors_telemetry_array,
           sun_sensors_timestamp_comparator
           );
 
     //Update the new array size with duplicates removed
-    sun_sensors_length = array_duplicate_removal
+    *sun_sensors_length = array_duplicate_removal
                                     (
                                     sun_sensors_telemetry_array,
-                                    sun_sensors_length,
+                                    *sun_sensors_length,
                                     sizeof *sun_sensors_telemetry_array,
                                     sun_sensors_timestamp_comparator
                                     );
@@ -210,7 +216,7 @@ int process_sun_sensors_data(SunSensorsTelemetryCalibrated* sun_sensors_telemetr
     int csv_file_status = write_array_to_csv(
         SUN_SENSOR_DATA_CSV_FILENAME,
         sun_sensors_telemetry_array,                // Generic pointer to the data array
-        sun_sensors_length,                         // Number of elements
+        *sun_sensors_length,                         // Number of elements
         sizeof(SunSensorsTelemetryCalibrated),      // Size of a single element
         sun_sensors_calibrated_to_csv_line,         // The callback formatter function
         CSV_DECIMAL_PRECISION,                      // Decimal precision on print
